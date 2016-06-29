@@ -11,15 +11,14 @@ __license__ = 'MIT'
 import sys
 import zmq
 from ConfigParser import SafeConfigParser, NoSectionError, NoOptionError
+from cStringIO import StringIO
 
 DEFAULT_FILENAME = 'skv.conf'
 DEFAULT_ADDRESS = 'tcp://*:2679'
 
 def main():
     config = SafeConfigParser()
-    rc = config.read(DEFAULT_FILENAME)
-    print rc
-    print config.sections()
+    config.read(DEFAULT_FILENAME)
 
     # setup zmq machinery
     zctx = zmq.Context()
