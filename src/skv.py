@@ -9,16 +9,14 @@ __version__ = '0.1.0'
 __license__ = 'MIT'
 
 import sys
-import os
-import ConfigParser
-import logging
 import zmq
+from ConfigParser import SafeConfigParser, NoSectionError, NoOptionError
 
 DEFAULT_FILENAME = 'skv.conf'
 DEFAULT_ADDRESS = 'tcp://*:2679'
 
 def main():
-    config = ConfigParser.SafeConfigParser()
+    config = SafeConfigParser()
     rc = config.read(DEFAULT_FILENAME)
     print rc
     print config.sections()
@@ -28,14 +26,48 @@ def main():
     zsck = zctx.socket(zmq.REP)
     zsck.bind(DEFAULT_ADDRESS)
 
+    def parse_path(path):
+        """Decomposite `section.key` path into section and key"""
+
+        try:
+            parts = path.split('.', 2)
+            return (parts[0], parts[1])
+        except IndexError as e:
+            raise KeyError
+
     while True:
-        zmsg = zsck.recv()
-        parts = zmsg.split('.', 2)
-        (s,k) = parts[0], parts[1]
-        print s, k
-        value = config.get(s, k)
-        print 'found', value
-        zsck.send(value)
+        events = zsck.poll(timeout=5)
+
+        if events & zmq.POLLIN:
+            zmsg_parts = zsck.recv_multipart()
+            opcode = zmsg_parts[0]
+
+            if opcode == 'GET':
+                try:
+                    path = zmsg_parts[1]
+                    (section, key) = parse_path(path)
+                    value = config.get(section, key, raw=True)
+                except KeyError as e:
+                    zsck.send('Bad key: `{0}`'.format(path))
+                except (NoSectionError, NoOptionError) as e:
+                    zsck.send('Not found: `{0}`'.format(path))
+                else:
+                    zsck.send(value)
+
+            elif opcode == 'PUT':
+                path = zmsg_parts[1]
+                try:
+                    (section, key) = parse_path(path)
+                    value = zmsg_parts[2]
+
+                    if not config.has_section(section):
+                        config.add_section(section)
+
+                    config.set(section, key, value)
+                except KeyError as e:
+                    zsck.send('Bad key: `{0}`'.format(path))
+                else:
+                    zsck.send('OK')
 
 
 if __name__ == '__main__':
