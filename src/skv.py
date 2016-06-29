@@ -69,6 +69,20 @@ def main():
                 else:
                     zsck.send('OK')
 
+            elif opcode == 'DUMP':
+                string_io = StringIO()
+                for section in config.sections():
+                    string_io.write('[{0}]\n'.format(section))
+                    for (key,value) in config.items(section):
+                        string_io.write('{0} = {1}\n'.format(key, value))
+                    string_io.write('\n')
+
+                zsck.send(string_io.getvalue())
+                string_io.close()
+
+
+
+
 
 if __name__ == '__main__':
     sys.exit(main())

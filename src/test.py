@@ -22,5 +22,7 @@ zmsg = zsck.recv()
 zsck.send_multipart(['GET', '5'])
 zmsg = zsck.recv()
 
+zsck.send_multipart(['DUMP'])
+zmsg = zsck.recv()
 
 print zmsg
