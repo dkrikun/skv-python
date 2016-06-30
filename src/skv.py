@@ -47,11 +47,11 @@ def main():
                     (section, key) = parse_path(path)
                     value = config.get(section, key, raw=True)
                 except KeyError as e:
-                    zsck.send('Bad key: `{0}`'.format(path))
+                    zsck.send_multipart(['FAIL', 'Bad key', path])
                 except (NoSectionError, NoOptionError) as e:
-                    zsck.send('Not found: `{0}`'.format(path))
+                    zsck.send_multipart(['NOTFOUND', path])
                 else:
-                    zsck.send(value)
+                    zsck.send_multipart(['OK', path, value])
 
             elif opcode == 'PUT':
                 path = zmsg_parts[1]
@@ -64,9 +64,9 @@ def main():
 
                     config.set(section, key, value)
                 except KeyError as e:
-                    zsck.send('Bad key: `{0}`'.format(path))
+                    zsck.send_multipart(['FAIL', 'Bad key', path])
                 else:
-                    zsck.send('OK')
+                    zsck.send_multipart(['OK'])
 
             elif opcode == 'DUMP':
                 string_io = StringIO()
@@ -76,7 +76,7 @@ def main():
                         string_io.write('{0} = {1}\n'.format(key, value))
                     string_io.write('\n')
 
-                zsck.send(string_io.getvalue())
+                zsck.send_multipart(['OK', string_io.getvalue()])
                 string_io.close()
 
 
